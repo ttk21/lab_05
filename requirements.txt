@@ -1,0 +1,4 @@
+https://github.com/tussedrotten/visgeom/archive/v0.1.3.zip
+https://github.com/tussedrotten/pylie/archive/v0.1.0.zip
+scipy
+pyqt5
