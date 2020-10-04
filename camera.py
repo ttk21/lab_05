@@ -13,7 +13,7 @@ class PerspectiveCamera:
     @classmethod
     def looks_at(cls, K: np.ndarray, camera_pos_w: np.ndarray, target_pos_w: np.ndarray, up_vector_w: np.ndarray):
         cam_to_target_w = target_pos_w - camera_pos_w
-        cam_z_w = cam_to_target_w / np.linalg.norm(cam_to_target_w)
+        cam_z_w = cam_to_target_w.flatten() / np.linalg.norm(cam_to_target_w)
 
         cam_to_right_w = np.cross(-up_vector_w.flatten(), cam_z_w)
         cam_x_w = cam_to_right_w / np.linalg.norm(cam_to_target_w)
@@ -49,6 +49,7 @@ class PerspectiveCamera:
         return measured_u - self.project_to_pixel(x_w)
 
     def jac_project_normalised_wrt_x_c(self, x_c: np.ndarray):
+        x_c = x_c.flatten()
         d = 1 / x_c[-1]
         x_n = d * x_c
 
@@ -56,7 +57,7 @@ class PerspectiveCamera:
                          [0, d, -d * x_n[1]]])
 
     def jac_project_normalised_wrt_pose_w_c(self, x_w: np.ndarray):
-        x_c = self.world_to_camera(x_w)
+        x_c = self.world_to_camera(x_w).flatten()
 
         d = 1 / x_c[-1]
         x_n = d * x_c
@@ -64,7 +65,7 @@ class PerspectiveCamera:
         # Corresponds to self.jac_project_normalised_wrt_x_c(self.world_to_camera(x_w)) @ \
         #                self.pose_c_w.jac_action_Xx_wrt_X(x_w) @ pose.w_c.jac_inverse_X_wrt_X()
         return np.array([[-d, 0, d * x_n[0], x_n[0] * x_n[1],  -1 - x_n[0] ** 2,  x_n[1]],
-                         [0, -d, d * x_n[1], 1 + x_n[1] ** 2, -x_n[0] * x_n[1]], -x_n[0]])
+                         [0, -d, d * x_n[1], 1 + x_n[1] ** 2, -x_n[0] * x_n[1], -x_n[0]]])
 
     def jac_project_normalised_wrt_x_w(self, x_w: np.ndarray):
         return self.jac_project_normalised_wrt_x_c(self.world_to_camera(x_w)) @ self.pose_c_w.jac_action_Xx_wrt_x()
