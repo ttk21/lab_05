@@ -84,7 +84,7 @@ def visualise(true_cam, points_w, observed_x_n, x, cost):
 
         curr_cam = PerspectiveCamera(true_cam.K, x[i])
         artists.extend(vg.plot_camera_image_plane(ax, curr_cam.K, curr_cam.pose_w_c.to_tuple()))
-        artists.extend(vg.utils.plot_as_box(ax, curr_cam.camera_to_world(observed_x_n)))
+        artists.extend(vg.utils.plot_as_box(ax, curr_cam.camera_to_world(observed_x_n), alpha=0.4))
         artists.extend(vg.utils.plot_as_box(ax, curr_cam.camera_to_world(curr_cam.project_to_normalised_3d(points_w))))
         plt.draw()
         while True:
