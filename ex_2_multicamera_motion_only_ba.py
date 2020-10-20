@@ -3,21 +3,22 @@ import visgeom as vg
 
 from camera import PerspectiveCamera
 from measurements import PrecalibratedCameraMeasurementsFixedWorld
-from optim import levenberg_marquardt
-from visualise_ba import visualise_moba
+from optim import CompositeStateVariable, levenberg_marquardt
 
-"""Example 1 - Motion-only Bundle Adjustment"""
+from visualise_ba import visualise_multicam_moba
+
+"""Example 2 - Multicamera motion-only Bundle Adjustment"""
 
 
-class PrecalibratedMotionOnlyBAObjective:
-    """Implements linearisation of motion-only BA objective function"""
+class PrecalibratedMulticameraMotionOnlyBAObjective:
+    """Implements linearisation of the multicamera motion-only BA objective function"""
 
-    def __init__(self, measurement):
+    def __init__(self, measurements):
         """Constructs the objective
 
-        :param measurement: A PrecalibratedCameraMeasurementsFixedWorld object.
+        :param measurements: A list of PrecalibratedCameraMeasurementsFixedWorld objects, one for each camera.
         """
-        self.measurement = measurement
+        self.measurements = measurements
 
     @staticmethod
     def extract_measurement_jacobian(point_index, pose_state_c_w, measurement):
@@ -49,26 +50,29 @@ class PrecalibratedMotionOnlyBAObjective:
 
         return b
 
-    def linearise(self, pose_state_w_c):
+    def linearise(self, pose_states_w_c):
         """Linearises the objective over all states and measurements
 
-        :param pose_state_w_c: The current camera pose state in the world frame.
+        :param pose_states_w_c: The current camera pose states in the world frame.
         :return:
           A - The full measurement Jacobian
           b - The full measurement error
           cost - The current cost
         """
-        num_points = self.measurement.num
+        num_cameras = len(self.measurements)
+        num_points = self.measurements[0].num
 
-        A = np.zeros((2 * num_points, 6))
-        b = np.zeros((2 * num_points, 1))
+        A = np.zeros((2 * num_cameras * num_points, 6 * num_cameras))
+        b = np.zeros((2 * num_cameras * num_points, 1))
 
-        pose_state_c_w = pose_state_w_c.inverse()
+        for i in range(num_cameras):
+            pose_state_c_w = pose_states_w_c[i].inverse()
 
-        for j in range(num_points):
-            rows = slice(j * 2, (j + 1) * 2)
-            A[rows, :] = self.extract_measurement_jacobian(j, pose_state_c_w, self.measurement)
-            b[rows, :] = self.extract_measurement_error(j, pose_state_c_w, self.measurement)
+            for j in range(num_points):
+                rows = slice(i * 2 * num_points + j * 2, i * 2 * num_points + (j + 1) * 2)
+                cols = slice(i * 6, (i + 1) * 6)
+                A[rows, cols] = self.extract_measurement_jacobian(j, pose_state_c_w, self.measurements[i])
+                b[rows, :] = self.extract_measurement_error(j, pose_state_c_w, self.measurements[i])
 
         return A, b, b.T.dot(b)
 
@@ -77,7 +81,7 @@ def main():
     # World box.
     points_w = vg.utils.generate_box()
 
-    # Define common camera.
+    # Define common camera parameters.
     w = 640
     h = 480
     focal_lengths = 0.75 * h * np.ones((2, 1))
@@ -85,17 +89,21 @@ def main():
     camera = PerspectiveCamera(focal_lengths, principal_point)
 
     # Generate a set of camera measurements.
-    true_pose_w_c = PerspectiveCamera.looks_at_pose(np.array([[3, -4, 0]]).T, np.zeros((3, 1)), np.array([[0, 0, 1]]).T)
-    measurement = PrecalibratedCameraMeasurementsFixedWorld.generate(camera, true_pose_w_c, points_w)
+    true_poses_w_c = [
+        PerspectiveCamera.looks_at_pose(np.array([[3, -4, 0]]).T, np.zeros((3, 1)), np.array([[0, 0, 1]]).T),
+        PerspectiveCamera.looks_at_pose(np.array([[3, 4, 0]]).T, np.zeros((3, 1)), np.array([[0, 0, 1]]).T)]
+    measurements = [PrecalibratedCameraMeasurementsFixedWorld.generate(camera, true_poses_w_c[0], points_w),
+                    PrecalibratedCameraMeasurementsFixedWorld.generate(camera, true_poses_w_c[1], points_w)]
 
     # Construct model from measurements.
-    model = PrecalibratedMotionOnlyBAObjective(measurement)
+    model = PrecalibratedMulticameraMotionOnlyBAObjective(measurements)
 
     # Perturb camera pose and use as initial state.
-    init_pose_wc = true_pose_w_c + 0.3 * np.random.randn(6, 1)
+    init_poses_wc = [pose + 0.3 * np.random.randn(6, 1) for pose in true_poses_w_c]
+    init_state = CompositeStateVariable(init_poses_wc)
 
     # Estimate pose in the world frame from point correspondences.
-    x, cost, A, b = levenberg_marquardt(init_pose_wc, model)
+    x, cost, A, b = levenberg_marquardt(init_state, model)
     cov_x_final = np.linalg.inv(A.T @ A)
 
     # Print covariance.
@@ -104,7 +112,7 @@ def main():
         print(cov_x_final)
 
     # Visualise
-    visualise_moba(true_pose_w_c, points_w, measurement, x, cost)
+    visualise_multicam_moba(true_poses_w_c, points_w, measurements, x, cost)
 
 
 if __name__ == "__main__":

@@ -42,8 +42,8 @@ class PerspectiveCamera:
     def pixel_to_normalised(self, u: np.ndarray):
         return (u - self.c) / self.f
 
-    def pixel_cov_to_normalised_com(self, pixel_cov : np.ndarray):
-        S_f = np.diag(1/self.f.flatten())
+    def pixel_cov_to_normalised_com(self, pixel_cov: np.ndarray):
+        S_f = np.diag(1 / self.f.flatten())
         return S_f @ pixel_cov @ S_f.T
 
     @classmethod
@@ -71,9 +71,11 @@ class PerspectiveCamera:
 
         # Corresponds to PerspectiveCamera.jac_project_normalised_wrt_x_c(pose_c_w * x_w) @ \
         #                pose_c_w.jac_action_Xx_wrt_X(x_w) @ pose_c_w.inverse().jac_inverse_X_wrt_X()
-        return np.array([[-d, 0, d * xn[0], xn[0] * xn[1],  -1 - xn[0] ** 2,  xn[1]],
+        return np.array([[-d, 0, d * xn[0], xn[0] * xn[1], -1 - xn[0] ** 2, xn[1]],
                          [0, -d, d * xn[1], 1 + xn[1] ** 2, -xn[0] * xn[1], -xn[0]]])
 
     @classmethod
     def jac_project_world_to_normalised_wrt_x_w(cls, pose_c_w: SE3, x_w: np.ndarray):
         return cls.jac_project_normalised_wrt_x_c(pose_c_w * x_w) @ pose_c_w.jac_action_Xx_wrt_x()
+
+
