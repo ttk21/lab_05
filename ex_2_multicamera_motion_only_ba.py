@@ -92,8 +92,8 @@ def main():
     true_poses_w_c = [
         PerspectiveCamera.looks_at_pose(np.array([[3, -4, 0]]).T, np.zeros((3, 1)), np.array([[0, 0, 1]]).T),
         PerspectiveCamera.looks_at_pose(np.array([[3, 4, 0]]).T, np.zeros((3, 1)), np.array([[0, 0, 1]]).T)]
-    measurements = [PrecalibratedCameraMeasurementsFixedWorld.generate(camera, true_poses_w_c[0], points_w),
-                    PrecalibratedCameraMeasurementsFixedWorld.generate(camera, true_poses_w_c[1], points_w)]
+    measurements = \
+        [PrecalibratedCameraMeasurementsFixedWorld.generate(camera, pose, points_w) for pose in true_poses_w_c]
 
     # Construct model from measurements.
     model = PrecalibratedMulticameraMotionOnlyBAObjective(measurements)

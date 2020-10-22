@@ -91,8 +91,8 @@ def main():
         PerspectiveCamera.looks_at_pose(np.array([[3, 4, 0]]).T, np.zeros((3, 1)), np.array([[0, 0, 1]]).T)]
 
     # Generate a set of camera measurements.
-    measurements = [PrecalibratedCameraMeasurementsFixedCamera.generate(camera, true_poses_w_c[0], true_points_w),
-                    PrecalibratedCameraMeasurementsFixedCamera.generate(camera, true_poses_w_c[1], true_points_w)]
+    measurements = \
+        [PrecalibratedCameraMeasurementsFixedCamera.generate(camera, pose, true_points_w) for pose in true_poses_w_c]
 
     # Construct model from measurements.
     model = PrecalibratedStructureOnlyBAObjective(measurements)
