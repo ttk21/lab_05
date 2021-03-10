@@ -188,6 +188,7 @@ def levenberg_marquardt(x_init, model, cost_thresh=1e-9, delta_thresh=1e-9, max_
         else:
             x[it + 1] = x[it]
             cost[it + 1] = cost[it]
+            curr_lambda = 10 * curr_lambda
 
         if cost[it] < cost_thresh or np.linalg.norm(tau) < delta_thresh:
             x = x[:it + 2]
